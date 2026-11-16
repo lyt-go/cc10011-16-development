@@ -33,3 +33,30 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
 .page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+
+/* ===== 同比环比：快照、数据集与追溯 ===== */
+.panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 12px 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.panel-head h3 { margin: 0; font-size: 15px; }
+.panel-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 12px; }
+.sub-title { margin: 14px 0 8px; font-size: 13px; color: #334155; }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.grid-form select, .filter-item select { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 13px; background: #fff; }
+.split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; }
+@media (max-width: 1100px) { .split { grid-template-columns: 1fr; } }
+.data-table.compact th, .data-table.compact td { padding: 6px 8px; font-size: 12px; }
+.reason-cell { color: #92400e; max-width: 320px; }
+.row-selected { background: #eef4ff; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; background: #eef2f7; color: #334155; }
+.badge.ok { background: #e7f6ec; color: #166534; }
+.badge.bad { background: #fdeaea; color: #b42318; }
+.ok-text { color: #166534; }
+.snapshot-card { border: 1px solid #bfd3f5; background: #f8fbff; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.snapshot-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 14px; margin-bottom: 8px; }
+.detail-item { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.detail-item strong { font-size: 13px; color: #1f2937; font-weight: 600; }
+.detail-item.wide { grid-column: 1 / -1; }
+.trace-block { background: #0f172a; color: #d7e3f4; border-radius: 6px; padding: 10px; font-size: 11px; max-height: 320px; overflow: auto; }
+.json-input { width: 100%; min-height: 180px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 8px; }

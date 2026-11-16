@@ -40,13 +40,53 @@ const stats = [
 ]
 
 type Row = Record<string, string | number | null>
+type ComparisonCard = Record<string, string | number | boolean | string[] | null>
 
 export default function DashboardView() {
   const [rows, setRows] = useState<Row[]>([])
   const [total, setTotal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
+  const [notice, setNotice] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
+  const [comparison, setComparison] = useState<{
+    刷新时间?: string
+    读取口径?: string
+    可比数?: number
+    不可比数?: number
+    cards?: ComparisonCard[]
+  }>({})
+  const [metricSnapshots, setMetricSnapshots] = useState<Row[]>([])
   const filterFields = useMemo(() => columns.slice(0, 3), [])
+
+  const refreshComparison = useCallback(async () => {
+    setNotice('')
+    try {
+      const response = await request('/api/comparison/dashboard')
+      if (!response.ok) {
+        throw new Error('同比环比对比快照读取失败')
+      }
+      setComparison(await response.json())
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '同比环比对比快照读取失败')
+    }
+  }, [])
+
+  const refreshMetricSnapshots = useCallback(async () => {
+    try {
+      const response = await request('/api/comparison/metric-snapshots')
+      if (response.ok) {
+        const payload = await response.json()
+        setMetricSnapshots(payload.items ?? [])
+      }
+    } catch {
+      /* 指标快照读取失败不覆盖大盘主表 */
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshComparison()
+    void refreshMetricSnapshots()
+  }, [refreshComparison, refreshMetricSnapshots])
 
   const reload = useCallback(async () => {
     setErrorMessage('')
@@ -73,7 +113,7 @@ export default function DashboardView() {
     try {
       const response = await request(`${ENDPOINT}/${row.id}/actions`, {
         method: 'POST',
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ values: { action } }),
       })
       if (!response.ok) {
         throw new Error('监控大盘动作未生效，请稍后重试')
@@ -97,6 +137,9 @@ export default function DashboardView() {
           </button>
           <button className="btn" type="button" onClick={() => window.open(`${ENDPOINT}/export`, '_blank')}>
             导出监控大盘清单
+          </button>
+          <button className="btn" type="button" onClick={() => { void refreshComparison(); void refreshMetricSnapshots() }}>
+            刷新对比快照
           </button>
         </div>
       </header>
@@ -153,9 +196,67 @@ export default function DashboardView() {
         </tbody>
       </table>
 
+      <section className="panel">
+        <div className="panel-head">
+          <h3>同比环比对比快照（只读已发布）</h3>
+          <span className="hint">{comparison.读取口径 ?? ''}{comparison.刷新时间 ? ` · 刷新于 ${comparison.刷新时间}` : ''}</span>
+        </div>
+        <p className="page-desc">
+          可比 {comparison.可比数 ?? 0} 项，不可比 {comparison.不可比数 ?? 0} 项；
+          缺基准或新鲜度越界时显示不可比原因，不沿用上次数字。
+        </p>
+        <table className="data-table compact">
+          <thead>
+            <tr><th>配置</th><th>指标</th><th>对比</th><th>基准 → 当期</th><th>增长率</th><th>来源快照</th><th>不可比原因</th></tr>
+          </thead>
+          <tbody>
+            {(comparison.cards ?? []).map((card) => (
+              <tr key={String(card['配置编号'])}>
+                <td>{String(card['配置编号'])}</td>
+                <td>{String(card['目标指标'])}</td>
+                <td>{String(card['对比类型'])}</td>
+                <td>{String(card['基准周期'] ?? '—')} → {String(card['当期周期'] ?? '—')}</td>
+                <td><span className={card['可比'] ? 'badge ok' : 'badge bad'}>{String(card['增长率文本'])}</span></td>
+                <td>{String(card['快照编号'] ?? '—')}</td>
+                <td className="reason-cell">{String(card['不可比原因'] ?? '—')}</td>
+              </tr>
+            ))}
+            {(comparison.cards ?? []).length === 0 && (
+              <tr><td className="empty-state" colSpan={7}>还没有已发布的对比快照</td></tr>
+            )}
+          </tbody>
+        </table>
+
+        <h4 className="sub-title">随对比基准同步的指标快照</h4>
+        <table className="data-table compact">
+          <thead>
+            <tr><th>指标</th><th>配置</th><th>基准 → 当期</th><th>版本</th><th>增长率</th><th>数据集</th><th>同步时间</th></tr>
+          </thead>
+          <tbody>
+            {metricSnapshots.filter((item) => item['状态'] === '当前').map((item) => (
+              <tr key={String(item.id)}>
+                <td>{String(item['指标编号'])} {String(item['指标名称'] ?? '')}</td>
+                <td>{String(item['配置编号'] ?? '—')}</td>
+                <td>{String(item['基准周期'] ?? '—')} → {String(item['当期周期'] ?? '—')}</td>
+                <td>v{String(item['指标版本'] ?? '—')}</td>
+                <td>{String(item['增长率文本'] ?? '—')}</td>
+                <td>{String(item['数据集编号'] ?? '—')}</td>
+                <td>{String(item['同步时间'] ?? '')}</td>
+              </tr>
+            ))}
+            {metricSnapshots.filter((item) => item['状态'] === '当前').length === 0 && (
+              <tr><td className="empty-state" colSpan={7}>还没有同步的指标快照</td></tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
       <footer className="page-foot">
         <span>共 {total} 条监控大盘记录</span>
-        {errorMessage && <span className="error-text">{errorMessage}</span>}
+        <span>
+          {notice && <span className="ok-text">{notice}</span>}
+          {errorMessage && <span className="error-text">{errorMessage}</span>}
+        </span>
       </footer>
     </section>
   )

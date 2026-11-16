@@ -63,3 +63,28 @@ def export_entries() -> dict[str, Any]:
     """导出实时指标清单：返回当前过滤条件下的全量数据。"""
     items, total = service.list_entries(page=1, size=10000)
     return {"module": "realtimemetric", "total": total, "items": items}
+
+
+@router.get("/sync/state")
+def sync_state() -> dict[str, Any]:
+    """实时指标同步现状：最新实时值、同步批次记录与最近的窗口聚合记录。"""
+    return {
+        "live": service.live_states(),
+        "batches": service.sync_batches(),
+        "windows": service.windows(limit=60),
+    }
+
+
+@router.post("/sync/windows", response_model=ActionResult)
+def sync_windows(payload: EntryPayload) -> ActionResult:
+    """消费一批指标窗口聚合记录；任意一条校验失败整批回滚，只留失败状态记录。"""
+    raw = payload.values.get("records")
+    if raw is None:
+        raw = payload.values.get("items")
+    if not isinstance(raw, list):
+        return ActionResult(ok=False, message="同步批次需要 records 数组")
+    summary, message = service.sync_windows(raw)
+    if summary is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=summary)
+
